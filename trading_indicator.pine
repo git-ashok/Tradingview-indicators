@@ -41,6 +41,9 @@ fvg_timeframe = input.string("Current", "FVG Detection Timeframe", options=["Cur
 fvg_limit = input.int(5, "Number of FVGs to Show", minval=1, maxval=10, group=group_fvg)
 fvg_extend_right = input.bool(true, "Extend FVGs to Right", group=group_fvg)
 fvg_show_labels = input.bool(true, "Show FVG Labels", group=group_fvg)
+fvg_show_midpoint = input.bool(true, "Show FVG Midpoint Lines", group=group_fvg)
+fvg_midpoint_style = input.string("Dashed", "FVG Midpoint Line Style", options=["Solid", "Dashed", "Dotted"], group=group_fvg)
+fvg_midpoint_width = input.int(1, "FVG Midpoint Line Width", minval=1, maxval=3, group=group_fvg)
 
 // Colors - Levels
 group_colors = "═══ LEVEL COLORS ═══"
@@ -58,6 +61,10 @@ fvg_bullish_color = input.color(color.new(color.green, 80), "Bullish FVG Color",
 fvg_bearish_color = input.color(color.new(color.red, 80), "Bearish FVG Color", group=group_colors)
 ifvg_bullish_color = input.color(color.new(color.lime, 80), "Bullish IFVG Color", group=group_colors)
 ifvg_bearish_color = input.color(color.new(color.orange, 80), "Bearish IFVG Color", group=group_colors)
+fvg_midpoint_bull_color = input.color(color.new(color.green, 30), "Bullish FVG Midpoint Color", group=group_colors)
+fvg_midpoint_bear_color = input.color(color.new(color.red, 30), "Bearish FVG Midpoint Color", group=group_colors)
+ifvg_midpoint_bull_color = input.color(color.new(color.lime, 30), "Bullish IFVG Midpoint Color", group=group_colors)
+ifvg_midpoint_bear_color = input.color(color.new(color.orange, 30), "Bearish IFVG Midpoint Color", group=group_colors)
 
 // Background Colors
 group_bg_colors = "═══ BACKGROUND COLORS ═══"
@@ -88,6 +95,13 @@ get_line_style() =>
         "Dashed" => line.style_dashed
         "Dotted" => line.style_dotted
         => line.style_solid
+
+get_fvg_midpoint_style() =>
+    switch fvg_midpoint_style
+        "Solid" => line.style_solid
+        "Dashed" => line.style_dashed
+        "Dotted" => line.style_dotted
+        => line.style_dashed
 
 // Session detection functions
 is_london_session() =>
@@ -194,6 +208,12 @@ var fvg_bull_boxes = array.new<box>()
 var fvg_bear_boxes = array.new<box>()
 var ifvg_bull_boxes = array.new<box>()
 var ifvg_bear_boxes = array.new<box>()
+
+// FVG Midpoint Lines Arrays
+var fvg_bull_midlines = array.new<line>()
+var fvg_bear_midlines = array.new<line>()
+var ifvg_bull_midlines = array.new<line>()
+var ifvg_bear_midlines = array.new<line>()
 
 // ===================== CALCULATIONS =====================
 // Previous Week High/Low
@@ -318,6 +338,11 @@ manage_fvg_array(fvg_array) =>
         old_box = array.shift(fvg_array)
         box.delete(old_box)
 
+manage_fvg_midline_array(midline_array) =>
+    if array.size(midline_array) > fvg_limit
+        old_line = array.shift(midline_array)
+        line.delete(old_line)
+
 // Detect Bullish FVG (gap up)
 detect_bullish_fvg() =>
     if is_valid_fvg_timeframe() and show_fvg
@@ -352,47 +377,95 @@ detect_bearish_ifvg() =>
 
 // Create FVG boxes
 if detect_bullish_fvg()
-    fvg_box = box.new(bar_index[2], high[2], bar_index + (fvg_extend_right ? 20 : 0), low[0], 
+    fvg_top = low[0]
+    fvg_bottom = high[2]
+    fvg_midpoint = (fvg_top + fvg_bottom) / 2
+    
+    fvg_box = box.new(bar_index[2], fvg_bottom, bar_index + (fvg_extend_right ? 20 : 0), fvg_top, 
                       bgcolor=fvg_bullish_color, border_color=color.new(color.green, 50), border_width=1,
                       extend=fvg_extend_right ? extend.right : extend.none)
     array.push(fvg_bull_boxes, fvg_box)
     manage_fvg_array(fvg_bull_boxes)
     
+    // Create midpoint line
+    if fvg_show_midpoint
+        midpoint_line = line.new(bar_index[2], fvg_midpoint, bar_index + (fvg_extend_right ? 20 : 0), fvg_midpoint,
+                                color=fvg_midpoint_bull_color, width=fvg_midpoint_width, style=get_fvg_midpoint_style(),
+                                extend=fvg_extend_right ? extend.right : extend.none)
+        array.push(fvg_bull_midlines, midpoint_line)
+        manage_fvg_midline_array(fvg_bull_midlines)
+    
     if fvg_show_labels
-        label.new(bar_index, low[0], text="FVG↑", style=label.style_label_up, 
+        label.new(bar_index, fvg_top, text="FVG↑", style=label.style_label_up, 
                   color=color.new(color.green, 30), textcolor=color.white, size=size.small)
 
 if detect_bearish_fvg()
-    fvg_box = box.new(bar_index[2], low[2], bar_index + (fvg_extend_right ? 20 : 0), high[0], 
+    fvg_top = low[2]
+    fvg_bottom = high[0]
+    fvg_midpoint = (fvg_top + fvg_bottom) / 2
+    
+    fvg_box = box.new(bar_index[2], fvg_top, bar_index + (fvg_extend_right ? 20 : 0), fvg_bottom, 
                       bgcolor=fvg_bearish_color, border_color=color.new(color.red, 50), border_width=1,
                       extend=fvg_extend_right ? extend.right : extend.none)
     array.push(fvg_bear_boxes, fvg_box)
     manage_fvg_array(fvg_bear_boxes)
     
+    // Create midpoint line
+    if fvg_show_midpoint
+        midpoint_line = line.new(bar_index[2], fvg_midpoint, bar_index + (fvg_extend_right ? 20 : 0), fvg_midpoint,
+                                color=fvg_midpoint_bear_color, width=fvg_midpoint_width, style=get_fvg_midpoint_style(),
+                                extend=fvg_extend_right ? extend.right : extend.none)
+        array.push(fvg_bear_midlines, midpoint_line)
+        manage_fvg_midline_array(fvg_bear_midlines)
+    
     if fvg_show_labels
-        label.new(bar_index, high[0], text="FVG↓", style=label.style_label_down, 
+        label.new(bar_index, fvg_bottom, text="FVG↓", style=label.style_label_down, 
                   color=color.new(color.red, 30), textcolor=color.white, size=size.small)
 
 if detect_bullish_ifvg()
-    ifvg_box = box.new(bar_index[2], low[2], bar_index + (fvg_extend_right ? 20 : 0), high[0], 
+    ifvg_top = high[0]
+    ifvg_bottom = low[2]
+    ifvg_midpoint = (ifvg_top + ifvg_bottom) / 2
+    
+    ifvg_box = box.new(bar_index[2], ifvg_bottom, bar_index + (fvg_extend_right ? 20 : 0), ifvg_top, 
                        bgcolor=ifvg_bullish_color, border_color=color.new(color.lime, 50), border_width=1,
                        extend=fvg_extend_right ? extend.right : extend.none)
     array.push(ifvg_bull_boxes, ifvg_box)
     manage_fvg_array(ifvg_bull_boxes)
     
+    // Create midpoint line
+    if fvg_show_midpoint
+        midpoint_line = line.new(bar_index[2], ifvg_midpoint, bar_index + (fvg_extend_right ? 20 : 0), ifvg_midpoint,
+                                color=ifvg_midpoint_bull_color, width=fvg_midpoint_width, style=get_fvg_midpoint_style(),
+                                extend=fvg_extend_right ? extend.right : extend.none)
+        array.push(ifvg_bull_midlines, midpoint_line)
+        manage_fvg_midline_array(ifvg_bull_midlines)
+    
     if fvg_show_labels
-        label.new(bar_index, high[0], text="IFVG↑", style=label.style_label_up, 
+        label.new(bar_index, ifvg_top, text="IFVG↑", style=label.style_label_up, 
                   color=color.new(color.lime, 30), textcolor=color.black, size=size.small)
 
 if detect_bearish_ifvg()
-    ifvg_box = box.new(bar_index[2], high[2], bar_index + (fvg_extend_right ? 20 : 0), low[0], 
+    ifvg_top = high[2]
+    ifvg_bottom = low[0]
+    ifvg_midpoint = (ifvg_top + ifvg_bottom) / 2
+    
+    ifvg_box = box.new(bar_index[2], ifvg_top, bar_index + (fvg_extend_right ? 20 : 0), ifvg_bottom, 
                        bgcolor=ifvg_bearish_color, border_color=color.new(color.orange, 50), border_width=1,
                        extend=fvg_extend_right ? extend.right : extend.none)
     array.push(ifvg_bear_boxes, ifvg_box)
     manage_fvg_array(ifvg_bear_boxes)
     
+    // Create midpoint line
+    if fvg_show_midpoint
+        midpoint_line = line.new(bar_index[2], ifvg_midpoint, bar_index + (fvg_extend_right ? 20 : 0), ifvg_midpoint,
+                                color=ifvg_midpoint_bear_color, width=fvg_midpoint_width, style=get_fvg_midpoint_style(),
+                                extend=fvg_extend_right ? extend.right : extend.none)
+        array.push(ifvg_bear_midlines, midpoint_line)
+        manage_fvg_midline_array(ifvg_bear_midlines)
+    
     if fvg_show_labels
-        label.new(bar_index, low[0], text="IFVG↓", style=label.style_label_down, 
+        label.new(bar_index, ifvg_bottom, text="IFVG↓", style=label.style_label_down, 
                   color=color.new(color.orange, 30), textcolor=color.black, size=size.small)
 
 // ===================== VWAP =====================

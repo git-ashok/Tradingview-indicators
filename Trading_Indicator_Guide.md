@@ -41,9 +41,10 @@ This comprehensive Pine Script indicator combines multiple trading tools into on
 - **Bearish FVG**: Gap down where high[0] < low[2] (red boxes)
 - **Bullish IFVG**: Rejection from bearish gap area (lime boxes)
 - **Bearish IFVG**: Rejection from bullish gap area (orange boxes)
+- **Midpoint Lines**: Customizable lines showing exact center of each FVG/IFVG
 - **Timeframe Specific**: Only shows on selected timeframes (1m, 5m, 15m, 1h, 4h, 1D)
 - **Limit Control**: Shows last 5 FVGs by default (customizable 1-10)
-- **Features**: Extend to right, labels, custom colors
+- **Features**: Extend to right, labels, midpoints, custom colors and styles
 
 ### 7. Technical Indicators
 - **VWAP**: Volume Weighted Average Price
@@ -95,6 +96,11 @@ Turn any feature on/off independently:
   - Bearish FVG: Red (80% transparency)  
   - Bullish IFVG: Lime (80% transparency)
   - Bearish IFVG: Orange (80% transparency)
+- **FVG Midpoint Colors**:
+  - Bullish FVG Midpoint: Green (30% transparency)
+  - Bearish FVG Midpoint: Red (30% transparency)
+  - Bullish IFVG Midpoint: Lime (30% transparency)
+  - Bearish IFVG Midpoint: Orange (30% transparency)
 
 **Background Colors**: Customize session background highlights
 - London: Light Blue (95% transparency)
@@ -119,6 +125,9 @@ Turn any feature on/off independently:
 - **Number to Show**: 1-10 FVGs/IFVGs (default 5)
 - **Extend Right**: Extend boxes to the right edge
 - **Show Labels**: Display FVG/IFVG labels on boxes
+- **Show Midpoint Lines**: Toggle midpoint lines on/off
+- **Midpoint Line Style**: Solid, Dashed (default), or Dotted
+- **Midpoint Line Width**: 1-3 pixels (default 1)
 - **Timeframe Filtering**: Only shows FVGs on selected timeframes
 
 ## How to Use
@@ -165,10 +174,13 @@ Turn any feature on/off independently:
 #### Fair Value Gaps Trading
 - **FVG Strategy**: Trade fills of fair value gaps as magnets
 - **IFVG Strategy**: Look for reversals at inverse fair value gaps
+- **Midpoint Trading**: Use FVG midpoints as precise entry/exit levels
+- **50% Rule**: Price often finds support/resistance at FVG midpoints
 - **Timeframe Selection**: Use higher timeframes for stronger FVGs
-- **Entry Timing**: Enter on retests of FVG levels
+- **Entry Timing**: Enter on retests of FVG levels or midpoint reactions
 - **Target Setting**: Use FVGs as support/resistance levels
 - **Confluence**: Combine FVGs with session levels for high-probability setups
+- **Partial Fills**: Monitor midpoint reactions for partial FVG fills
 
 ## Label Reference
 - **PWH/PWL**: Previous Week High/Low
@@ -201,6 +213,8 @@ The indicator includes alerts for:
 6. **FVG Timeframes**: Use higher timeframes (1h, 4h, 1D) for stronger FVG signals
 7. **FVG Validation**: Wait for price to show respect at FVG levels before entering
 8. **Limit FVGs**: Keep FVG count low (3-5) to avoid chart clutter
+9. **Midpoint Focus**: Pay special attention to price reactions at FVG midpoints
+10. **Midpoint Style**: Use dashed lines for midpoints to distinguish from other levels
 
 ## Troubleshooting
 
@@ -212,6 +226,8 @@ The indicator includes alerts for:
 - **FVGs not showing**: Verify timeframe selection matches chart timeframe
 - **Too many FVGs**: Reduce the number limit in settings
 - **FVG quality**: Use higher timeframes for more reliable FVG signals
+- **Midpoints not visible**: Check if "Show FVG Midpoint Lines" is enabled
+- **Midpoint clutter**: Adjust line width/style or disable on lower timeframes
 
 ### Performance Optimization
 - Turn off unused features
@@ -220,5 +236,7 @@ The indicator includes alerts for:
 - Reduce FVG count to 3-5 for better performance
 - Use FVG timeframe filtering to reduce noise
 - Disable FVG labels on lower timeframes to reduce visual clutter
+- Turn off FVG midpoints on busy charts to reduce line count
+- Use thinner midpoint lines (width 1) for cleaner appearance
 
 This indicator provides institutional-grade level analysis with full customization control, making it suitable for any trading style or market condition.
