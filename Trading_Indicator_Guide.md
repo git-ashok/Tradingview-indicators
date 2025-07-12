@@ -1,7 +1,7 @@
-# Ultimate Trading Levels & Sessions Indicator - User Guide
+# ICT Momentum Indicator - User Guide
 
 ## Overview
-This comprehensive Pine Script indicator combines multiple trading tools into one powerful indicator for TradingView. It displays key levels, session highlights, technical indicators, and provides full customization control.
+This comprehensive Pine Script indicator combines multiple ICT (Inner Circle Trader) concepts and trading tools into one powerful indicator for TradingView. It displays key levels, session highlights, Fair Value Gaps, Silver Bullets, and provides full customization control.
 
 ## Features Included
 
@@ -133,7 +133,7 @@ Turn any feature on/off independently:
 ## How to Use
 
 ### Installation
-1. Copy the Pine Script code from `trading_indicator.pine`
+1. Copy the Pine Script code from `ICT_momentum.pine`
 2. Open TradingView and go to Pine Editor
 3. Paste the code and click "Add to Chart"
 
@@ -239,4 +239,4 @@ The indicator includes alerts for:
 - Turn off FVG midpoints on busy charts to reduce line count
 - Use thinner midpoint lines (width 1) for cleaner appearance
 
-This indicator provides institutional-grade level analysis with full customization control, making it suitable for any trading style or market condition.
+The ICT Momentum indicator provides institutional-grade level analysis following Inner Circle Trader concepts, with full customization control. It combines key ICT methodologies including Fair Value Gaps, Silver Bullets, session analysis, and liquidity concepts into one comprehensive tool suitable for any trading style or market condition.

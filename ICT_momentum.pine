@@ -1,5 +1,5 @@
 //@version=5
-indicator("Ultimate Trading Levels & Sessions", shorttitle="UTL&S", overlay=true, max_lines_count=500, max_boxes_count=500)
+indicator("ICT Momentum", shorttitle="ICT_momentum", overlay=true, max_lines_count=500, max_boxes_count=500)
 
 // ===================== INPUT GROUPS =====================
 // Toggle Controls
@@ -9,13 +9,13 @@ show_yesterday = input.bool(true, "Show Yesterday Levels", group=group_toggles)
 show_london = input.bool(true, "Show London Session", group=group_toggles)
 show_asia = input.bool(true, "Show Asia Session", group=group_toggles)
 show_ny_pm = input.bool(true, "Show New York PM Session", group=group_toggles)
+show_silver_bullets = input.bool(true, "Show ICT Silver Bullets", group=group_toggles)
+show_fvg = input.bool(true, "Show ICT Fair Value Gaps", group=group_toggles)
+show_ifvg = input.bool(true, "Show ICT Inverse Fair Value Gaps", group=group_toggles)
 show_vwap = input.bool(true, "Show VWAP", group=group_toggles)
 show_ema = input.bool(true, "Show EMAs", group=group_toggles)
 show_pivots = input.bool(true, "Show Pivot Points", group=group_toggles)
 show_opening_range = input.bool(true, "Show Opening Range (9:30-9:45)", group=group_toggles)
-show_silver_bullets = input.bool(true, "Show ICT Silver Bullets", group=group_toggles)
-show_fvg = input.bool(true, "Show ICT Fair Value Gaps", group=group_toggles)
-show_ifvg = input.bool(true, "Show ICT Inverse Fair Value Gaps", group=group_toggles)
 
 // Session Times
 group_sessions = "═══ SESSION TIMES ═══"
