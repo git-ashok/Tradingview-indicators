@@ -1,0 +1,349 @@
+//@version=5
+indicator("Ultimate Trading Levels & Sessions", shorttitle="UTL&S", overlay=true, max_lines_count=500, max_boxes_count=500)
+
+// ===================== INPUT GROUPS =====================
+// Toggle Controls
+group_toggles = "═══ TOGGLE CONTROLS ═══"
+show_prev_week = input.bool(true, "Show Previous Week High/Low", group=group_toggles)
+show_yesterday = input.bool(true, "Show Yesterday Levels", group=group_toggles)
+show_london = input.bool(true, "Show London Session", group=group_toggles)
+show_asia = input.bool(true, "Show Asia Session", group=group_toggles)
+show_ny_pm = input.bool(true, "Show New York PM Session", group=group_toggles)
+show_vwap = input.bool(true, "Show VWAP", group=group_toggles)
+show_ema = input.bool(true, "Show EMAs", group=group_toggles)
+show_pivots = input.bool(true, "Show Pivot Points", group=group_toggles)
+show_opening_range = input.bool(true, "Show Opening Range (9:30-9:45)", group=group_toggles)
+
+// Session Times
+group_sessions = "═══ SESSION TIMES ═══"
+gmt_offset = input.int(-4, "GMT Offset for NY Time", minval=-12, maxval=12, group=group_sessions)
+london_start = input.string("03:00", "London Session Start", options=["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00"], group=group_sessions)
+london_end = input.string("12:00", "London Session End", options=["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"], group=group_sessions)
+asia_start = input.string("20:00", "Asia Session Start", options=["18:00", "19:00", "20:00", "21:00", "22:00", "23:00"], group=group_sessions)
+asia_end = input.string("05:00", "Asia Session End", options=["03:00", "04:00", "05:00", "06:00", "07:00", "08:00"], group=group_sessions)
+ny_pm_start = input.string("13:30", "NY PM Session Start", options=["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"], group=group_sessions)
+ny_pm_end = input.string("20:00", "NY PM Session End", options=["16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"], group=group_sessions)
+
+// Colors - Levels
+group_colors = "═══ LEVEL COLORS ═══"
+prev_week_color = input.color(color.purple, "Previous Week High/Low Color", group=group_colors)
+yesterday_color = input.color(color.yellow, "Yesterday Levels Color", group=group_colors)
+london_level_color = input.color(color.blue, "London Session Levels Color", group=group_colors)
+asia_level_color = input.color(color.red, "Asia Session Levels Color", group=group_colors)
+ny_pm_level_color = input.color(color.green, "NY PM Session Levels Color", group=group_colors)
+vwap_color = input.color(color.orange, "VWAP Color", group=group_colors)
+ema9_color = input.color(color.lime, "9 EMA Color", group=group_colors)
+ema21_color = input.color(color.fuchsia, "21 EMA Color", group=group_colors)
+pivot_color = input.color(color.gray, "Pivot Points Color", group=group_colors)
+opening_range_color = input.color(color.aqua, "Opening Range Color", group=group_colors)
+
+// Background Colors
+group_bg_colors = "═══ BACKGROUND COLORS ═══"
+london_bg_color = input.color(color.new(color.blue, 95), "London Session Background", group=group_bg_colors)
+asia_bg_color = input.color(color.new(color.red, 95), "Asia Session Background", group=group_bg_colors)
+ny_pm_bg_color = input.color(color.new(color.green, 95), "NY PM Session Background", group=group_bg_colors)
+
+// Line Styles
+group_styles = "═══ LINE STYLES ═══"
+line_width = input.int(1, "Line Width", minval=1, maxval=5, group=group_styles)
+line_style = input.string("Solid", "Line Style", options=["Solid", "Dashed", "Dotted"], group=group_styles)
+
+// EMA Settings
+group_ema = "═══ EMA SETTINGS ═══"
+ema9_length = input.int(9, "9 EMA Length", minval=1, group=group_ema)
+ema21_length = input.int(21, "21 EMA Length", minval=1, group=group_ema)
+show_ema_cross = input.bool(true, "Show EMA Cross Signals", group=group_ema)
+
+// ===================== HELPER FUNCTIONS =====================
+get_line_style() =>
+    switch line_style
+        "Solid" => line.style_solid
+        "Dashed" => line.style_dashed
+        "Dotted" => line.style_dotted
+        => line.style_solid
+
+// Session detection functions
+is_london_session() =>
+    t = time("GMT", london_start + "-" + london_end)
+    not na(t)
+
+is_asia_session() =>
+    t = time("GMT", asia_start + "-" + asia_end)
+    not na(t)
+
+is_ny_pm_session() =>
+    t = time("GMT", ny_pm_start + "-" + ny_pm_end)
+    not na(t)
+
+// Get NY time adjusted for GMT offset
+get_ny_time() =>
+    timestamp("GMT" + str.tostring(gmt_offset), year, month, dayofmonth, hour, minute, second)
+
+is_opening_range() =>
+    ny_time = get_ny_time()
+    ny_hour = hour(ny_time)
+    ny_minute = minute(ny_time)
+    (ny_hour == 9 and ny_minute >= 30) or (ny_hour == 9 and ny_minute <= 45)
+
+// ===================== VARIABLES =====================
+var float prev_week_high = na
+var float prev_week_low = na
+var float yesterday_high = na
+var float yesterday_low = na
+var float yesterday_close = na
+var float yesterday_mid = na
+var float london_high = na
+var float london_low = na
+var float asia_high = na
+var float asia_low = na
+var float ny_pm_high = na
+var float ny_pm_low = na
+var float opening_range_high = na
+var float opening_range_low = na
+
+// Session tracking
+var bool london_session_active = false
+var bool asia_session_active = false
+var bool ny_pm_session_active = false
+var bool opening_range_active = false
+
+// ===================== CALCULATIONS =====================
+// Previous Week High/Low
+if timeframe.isweekly or timeframe.ismonthly
+    prev_week_high := high[1]
+    prev_week_low := low[1]
+else
+    if timeframe.change("1W")
+        prev_week_high := high[1]
+        prev_week_low := low[1]
+
+// Yesterday High/Low/Close
+if timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
+    yesterday_high := high[1]
+    yesterday_low := low[1]
+    yesterday_close := close[1]
+    yesterday_mid := (yesterday_high + yesterday_low) / 2
+else
+    if timeframe.change("1D")
+        yesterday_high := high[1]
+        yesterday_low := low[1]
+        yesterday_close := close[1]
+        yesterday_mid := (yesterday_high + yesterday_low) / 2
+
+// Session High/Low tracking
+// London Session
+if is_london_session()
+    if not london_session_active
+        london_session_active := true
+        london_high := high
+        london_low := low
+    else
+        london_high := math.max(london_high, high)
+        london_low := math.min(london_low, low)
+else
+    if london_session_active
+        london_session_active := false
+
+// Asia Session
+if is_asia_session()
+    if not asia_session_active
+        asia_session_active := true
+        asia_high := high
+        asia_low := low
+    else
+        asia_high := math.max(asia_high, high)
+        asia_low := math.min(asia_low, low)
+else
+    if asia_session_active
+        asia_session_active := false
+
+// NY PM Session
+if is_ny_pm_session()
+    if not ny_pm_session_active
+        ny_pm_session_active := true
+        ny_pm_high := high
+        ny_pm_low := low
+    else
+        ny_pm_high := math.max(ny_pm_high, high)
+        ny_pm_low := math.min(ny_pm_low, low)
+else
+    if ny_pm_session_active
+        ny_pm_session_active := false
+
+// Opening Range (9:30-9:45 NY Time)
+if is_opening_range()
+    if not opening_range_active
+        opening_range_active := true
+        opening_range_high := high
+        opening_range_low := low
+    else
+        opening_range_high := math.max(opening_range_high, high)
+        opening_range_low := math.min(opening_range_low, low)
+else
+    if opening_range_active
+        opening_range_active := false
+
+// ===================== VWAP =====================
+vwap_value = show_vwap ? ta.vwap(hlc3) : na
+plot(vwap_value, title="VWAP", color=vwap_color, linewidth=line_width)
+
+// ===================== EMAs =====================
+ema9 = show_ema ? ta.ema(close, ema9_length) : na
+ema21 = show_ema ? ta.ema(close, ema21_length) : na
+
+plot(ema9, title="9 EMA", color=ema9_color, linewidth=line_width)
+plot(ema21, title="21 EMA", color=ema21_color, linewidth=line_width)
+
+// EMA Cross Signals
+ema_cross_up = show_ema and show_ema_cross and ta.crossover(ema9, ema21)
+ema_cross_down = show_ema and show_ema_cross and ta.crossunder(ema9, ema21)
+
+plotshape(ema_cross_up, title="EMA Cross Up", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small)
+plotshape(ema_cross_down, title="EMA Cross Down", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+
+// ===================== PIVOT POINTS =====================
+if show_pivots
+    pivot = (high[1] + low[1] + close[1]) / 3
+    r1 = 2 * pivot - low[1]
+    s1 = 2 * pivot - high[1]
+    r2 = pivot + (high[1] - low[1])
+    s2 = pivot - (high[1] - low[1])
+    r3 = high[1] + 2 * (pivot - low[1])
+    s3 = low[1] - 2 * (high[1] - pivot)
+    
+    hline(pivot, title="Pivot Point", color=pivot_color, linestyle=hline.style_solid, linewidth=line_width)
+    hline(r1, title="R1", color=color.new(pivot_color, 30), linestyle=hline.style_dashed, linewidth=line_width)
+    hline(s1, title="S1", color=color.new(pivot_color, 30), linestyle=hline.style_dashed, linewidth=line_width)
+    hline(r2, title="R2", color=color.new(pivot_color, 50), linestyle=hline.style_dotted, linewidth=line_width)
+    hline(s2, title="S2", color=color.new(pivot_color, 50), linestyle=hline.style_dotted, linewidth=line_width)
+    hline(r3, title="R3", color=color.new(pivot_color, 70), linestyle=hline.style_dotted, linewidth=line_width)
+    hline(s3, title="S3", color=color.new(pivot_color, 70), linestyle=hline.style_dotted, linewidth=line_width)
+
+// ===================== LEVEL LINES =====================
+// Previous Week High/Low
+if show_prev_week and not na(prev_week_high)
+    line.new(bar_index[100], prev_week_high, bar_index, prev_week_high, 
+             color=prev_week_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_prev_week and not na(prev_week_low)
+    line.new(bar_index[100], prev_week_low, bar_index, prev_week_low, 
+             color=prev_week_color, width=line_width, style=get_line_style(), extend=extend.right)
+
+// Yesterday Levels
+if show_yesterday and not na(yesterday_high)
+    line.new(bar_index[100], yesterday_high, bar_index, yesterday_high, 
+             color=yesterday_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_yesterday and not na(yesterday_low)
+    line.new(bar_index[100], yesterday_low, bar_index, yesterday_low, 
+             color=yesterday_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_yesterday and not na(yesterday_close)
+    line.new(bar_index[100], yesterday_close, bar_index, yesterday_close, 
+             color=color.new(yesterday_color, 30), width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_yesterday and not na(yesterday_mid)
+    line.new(bar_index[100], yesterday_mid, bar_index, yesterday_mid, 
+             color=color.new(yesterday_color, 50), width=line_width, style=line.style_dashed, extend=extend.right)
+
+// London Session Levels
+if show_london and not na(london_high)
+    line.new(bar_index[100], london_high, bar_index, london_high, 
+             color=london_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_london and not na(london_low)
+    line.new(bar_index[100], london_low, bar_index, london_low, 
+             color=london_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+
+// Asia Session Levels
+if show_asia and not na(asia_high)
+    line.new(bar_index[100], asia_high, bar_index, asia_high, 
+             color=asia_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_asia and not na(asia_low)
+    line.new(bar_index[100], asia_low, bar_index, asia_low, 
+             color=asia_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+
+// NY PM Session Levels
+if show_ny_pm and not na(ny_pm_high)
+    line.new(bar_index[100], ny_pm_high, bar_index, ny_pm_high, 
+             color=ny_pm_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_ny_pm and not na(ny_pm_low)
+    line.new(bar_index[100], ny_pm_low, bar_index, ny_pm_low, 
+             color=ny_pm_level_color, width=line_width, style=get_line_style(), extend=extend.right)
+
+// Opening Range Levels
+if show_opening_range and not na(opening_range_high)
+    line.new(bar_index[100], opening_range_high, bar_index, opening_range_high, 
+             color=opening_range_color, width=line_width, style=get_line_style(), extend=extend.right)
+    
+if show_opening_range and not na(opening_range_low)
+    line.new(bar_index[100], opening_range_low, bar_index, opening_range_low, 
+             color=opening_range_color, width=line_width, style=get_line_style(), extend=extend.right)
+
+// ===================== SESSION BACKGROUNDS =====================
+// London Session Background
+bgcolor(show_london and is_london_session() ? london_bg_color : na, title="London Session Background")
+
+// Asia Session Background
+bgcolor(show_asia and is_asia_session() ? asia_bg_color : na, title="Asia Session Background")
+
+// NY PM Session Background
+bgcolor(show_ny_pm and is_ny_pm_session() ? ny_pm_bg_color : na, title="NY PM Session Background")
+
+// ===================== LABELS =====================
+// Add labels for better identification
+if show_prev_week and not na(prev_week_high) and barstate.islast
+    label.new(bar_index, prev_week_high, text="PWH", style=label.style_label_down, color=prev_week_color, textcolor=color.white, size=size.small)
+    
+if show_prev_week and not na(prev_week_low) and barstate.islast
+    label.new(bar_index, prev_week_low, text="PWL", style=label.style_label_up, color=prev_week_color, textcolor=color.white, size=size.small)
+
+if show_yesterday and not na(yesterday_high) and barstate.islast
+    label.new(bar_index, yesterday_high, text="YH", style=label.style_label_down, color=yesterday_color, textcolor=color.black, size=size.small)
+    
+if show_yesterday and not na(yesterday_low) and barstate.islast
+    label.new(bar_index, yesterday_low, text="YL", style=label.style_label_up, color=yesterday_color, textcolor=color.black, size=size.small)
+
+if show_yesterday and not na(yesterday_close) and barstate.islast
+    label.new(bar_index, yesterday_close, text="YC", style=label.style_label_left, color=color.new(yesterday_color, 30), textcolor=color.black, size=size.small)
+
+if show_yesterday and not na(yesterday_mid) and barstate.islast
+    label.new(bar_index, yesterday_mid, text="YM", style=label.style_label_left, color=color.new(yesterday_color, 50), textcolor=color.black, size=size.small)
+
+// Session labels
+if show_london and not na(london_high) and barstate.islast
+    label.new(bar_index, london_high, text="LH", style=label.style_label_down, color=london_level_color, textcolor=color.white, size=size.small)
+    
+if show_london and not na(london_low) and barstate.islast
+    label.new(bar_index, london_low, text="LL", style=label.style_label_up, color=london_level_color, textcolor=color.white, size=size.small)
+
+if show_asia and not na(asia_high) and barstate.islast
+    label.new(bar_index, asia_high, text="AH", style=label.style_label_down, color=asia_level_color, textcolor=color.white, size=size.small)
+    
+if show_asia and not na(asia_low) and barstate.islast
+    label.new(bar_index, asia_low, text="AL", style=label.style_label_up, color=asia_level_color, textcolor=color.white, size=size.small)
+
+if show_ny_pm and not na(ny_pm_high) and barstate.islast
+    label.new(bar_index, ny_pm_high, text="NH", style=label.style_label_down, color=ny_pm_level_color, textcolor=color.white, size=size.small)
+    
+if show_ny_pm and not na(ny_pm_low) and barstate.islast
+    label.new(bar_index, ny_pm_low, text="NL", style=label.style_label_up, color=ny_pm_level_color, textcolor=color.white, size=size.small)
+
+if show_opening_range and not na(opening_range_high) and barstate.islast
+    label.new(bar_index, opening_range_high, text="ORH", style=label.style_label_down, color=opening_range_color, textcolor=color.black, size=size.small)
+    
+if show_opening_range and not na(opening_range_low) and barstate.islast
+    label.new(bar_index, opening_range_low, text="ORL", style=label.style_label_up, color=opening_range_color, textcolor=color.black, size=size.small)
+
+// ===================== ALERTS =====================
+// EMA Cross Alerts
+alertcondition(ema_cross_up, title="EMA Cross Up", message="9 EMA crossed above 21 EMA")
+alertcondition(ema_cross_down, title="EMA Cross Down", message="9 EMA crossed below 21 EMA")
+
+// Session Start Alerts
+alertcondition(is_london_session() and not is_london_session()[1], title="London Session Start", message="London Session has started")
+alertcondition(is_asia_session() and not is_asia_session()[1], title="Asia Session Start", message="Asia Session has started")
+alertcondition(is_ny_pm_session() and not is_ny_pm_session()[1], title="NY PM Session Start", message="NY PM Session has started")
+alertcondition(is_opening_range() and not is_opening_range()[1], title="Opening Range Start", message="Opening Range (9:30-9:45 NY) has started")
