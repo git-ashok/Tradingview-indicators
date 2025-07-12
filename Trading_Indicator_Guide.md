@@ -28,7 +28,15 @@ This comprehensive Pine Script indicator combines multiple trading tools into on
 - **Customizable**: Adjust GMT offset for your timezone
 - **Labels**: ORH (Opening Range High), ORL (Opening Range Low)
 
-### 5. Technical Indicators
+### 5. ICT Silver Bullets
+- **London Silver Bullet**: Default 03:00-04:00 GMT with purple background highlight
+- **NY AM Silver Bullet**: Default 13:30-14:30 GMT with orange background highlight
+- **NY PM Silver Bullet**: Default 18:30-19:30 GMT with maroon background highlight
+- **Purpose**: High-probability trading windows identified by ICT methodology
+- **Features**: Enhanced line thickness, distinct colors, and background highlighting
+- **Labels**: LSB-H/L (London), AM-SB-H/L (NY AM), PM-SB-H/L (NY PM)
+
+### 6. Technical Indicators
 - **VWAP**: Volume Weighted Average Price
 - **9 EMA & 21 EMA**: Exponential Moving Averages with cross signals
 - **Standard Pivot Points**: PP, R1-R3, S1-S3 levels
@@ -42,6 +50,7 @@ Turn any feature on/off independently:
 - London Session
 - Asia Session
 - New York PM Session
+- ICT Silver Bullets
 - VWAP
 - EMAs
 - Pivot Points
@@ -53,6 +62,10 @@ Turn any feature on/off independently:
 - **London**: 03:00-12:00 (customizable)
 - **Asia**: 20:00-05:00 (customizable)
 - **NY PM**: 13:30-20:00 (customizable)
+- **Silver Bullets Times**: Independent time controls for each Silver Bullet
+  - **London SB**: 03:00-04:00 GMT (customizable)
+  - **NY AM SB**: 13:30-14:30 GMT (customizable)
+  - **NY PM SB**: 18:30-19:30 GMT (customizable)
 
 ### Color Customization
 **Level Colors**: Customize colors for all lines
@@ -71,6 +84,10 @@ Turn any feature on/off independently:
 - London: Light Blue (95% transparency)
 - Asia: Light Red (95% transparency)  
 - NY PM: Light Green (95% transparency)
+- **Silver Bullets Backgrounds**:
+  - London SB: Purple (90% transparency)
+  - NY AM SB: Orange (90% transparency)
+  - NY PM SB: Maroon (90% transparency)
 
 ### Line Style Options
 - **Width**: 1-5 pixels
@@ -114,6 +131,14 @@ Turn any feature on/off independently:
 - Higher timeframes show cleaner level breaks
 - Lower timeframes good for precise entries
 
+#### ICT Silver Bullets Trading
+- **High-Probability Windows**: Focus trading during Silver Bullet periods
+- **London SB**: Early European momentum, often sets daily direction
+- **NY AM SB**: Market open volatility, institutional order flow
+- **NY PM SB**: Late session moves, often reversal patterns
+- **Breakout Strategy**: Trade breaks of Silver Bullet high/low levels
+- **Reversal Strategy**: Look for rejections at Silver Bullet extremes
+
 ## Label Reference
 - **PWH/PWL**: Previous Week High/Low
 - **YH/YL/YC/YM**: Yesterday High/Low/Close/Midpoint  
@@ -121,12 +146,16 @@ Turn any feature on/off independently:
 - **AH/AL**: Asia Session High/Low
 - **NH/NL**: NY PM Session High/Low
 - **ORH/ORL**: Opening Range High/Low
+- **LSB-H/LSB-L**: London Silver Bullet High/Low
+- **AM-SB-H/AM-SB-L**: NY AM Silver Bullet High/Low
+- **PM-SB-H/PM-SB-L**: NY PM Silver Bullet High/Low
 
 ## Alert Options
 The indicator includes alerts for:
 - EMA 9 crossing above/below EMA 21
 - Session start notifications (London, Asia, NY PM)
 - Opening Range start notification
+- Silver Bullets start notifications (London SB, NY AM SB, NY PM SB)
 
 ## Tips for Best Results
 

@@ -13,6 +13,7 @@ show_vwap = input.bool(true, "Show VWAP", group=group_toggles)
 show_ema = input.bool(true, "Show EMAs", group=group_toggles)
 show_pivots = input.bool(true, "Show Pivot Points", group=group_toggles)
 show_opening_range = input.bool(true, "Show Opening Range (9:30-9:45)", group=group_toggles)
+show_silver_bullets = input.bool(true, "Show ICT Silver Bullets", group=group_toggles)
 
 // Session Times
 group_sessions = "═══ SESSION TIMES ═══"
@@ -23,6 +24,14 @@ asia_start = input.string("20:00", "Asia Session Start", options=["18:00", "19:0
 asia_end = input.string("05:00", "Asia Session End", options=["03:00", "04:00", "05:00", "06:00", "07:00", "08:00"], group=group_sessions)
 ny_pm_start = input.string("13:30", "NY PM Session Start", options=["12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"], group=group_sessions)
 ny_pm_end = input.string("20:00", "NY PM Session End", options=["16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00"], group=group_sessions)
+
+// ICT Silver Bullets Times
+london_sb_start = input.string("03:00", "London Silver Bullet Start", options=["02:00", "03:00", "04:00", "05:00"], group=group_sessions)
+london_sb_end = input.string("04:00", "London Silver Bullet End", options=["03:00", "04:00", "05:00", "06:00"], group=group_sessions)
+ny_am_sb_start = input.string("13:30", "NY AM Silver Bullet Start (GMT)", options=["12:30", "13:00", "13:30", "14:00", "14:30"], group=group_sessions)
+ny_am_sb_end = input.string("14:30", "NY AM Silver Bullet End (GMT)", options=["13:30", "14:00", "14:30", "15:00", "15:30"], group=group_sessions)
+ny_pm_sb_start = input.string("18:30", "NY PM Silver Bullet Start (GMT)", options=["17:30", "18:00", "18:30", "19:00", "19:30"], group=group_sessions)
+ny_pm_sb_end = input.string("19:30", "NY PM Silver Bullet End (GMT)", options=["18:30", "19:00", "19:30", "20:00", "20:30"], group=group_sessions)
 
 // Colors - Levels
 group_colors = "═══ LEVEL COLORS ═══"
@@ -42,6 +51,11 @@ group_bg_colors = "═══ BACKGROUND COLORS ═══"
 london_bg_color = input.color(color.new(color.blue, 95), "London Session Background", group=group_bg_colors)
 asia_bg_color = input.color(color.new(color.red, 95), "Asia Session Background", group=group_bg_colors)
 ny_pm_bg_color = input.color(color.new(color.green, 95), "NY PM Session Background", group=group_bg_colors)
+
+// Silver Bullets Background Colors
+london_sb_bg_color = input.color(color.new(color.purple, 90), "London Silver Bullet Background", group=group_bg_colors)
+ny_am_sb_bg_color = input.color(color.new(color.orange, 90), "NY AM Silver Bullet Background", group=group_bg_colors)
+ny_pm_sb_bg_color = input.color(color.new(color.maroon, 90), "NY PM Silver Bullet Background", group=group_bg_colors)
 
 // Line Styles
 group_styles = "═══ LINE STYLES ═══"
@@ -75,6 +89,19 @@ is_ny_pm_session() =>
     t = time("GMT", ny_pm_start + "-" + ny_pm_end)
     not na(t)
 
+// Silver Bullets session detection functions
+is_london_silver_bullet() =>
+    t = time("GMT", london_sb_start + "-" + london_sb_end)
+    not na(t)
+
+is_ny_am_silver_bullet() =>
+    t = time("GMT", ny_am_sb_start + "-" + ny_am_sb_end)
+    not na(t)
+
+is_ny_pm_silver_bullet() =>
+    t = time("GMT", ny_pm_sb_start + "-" + ny_pm_sb_end)
+    not na(t)
+
 // Get NY time adjusted for GMT offset
 get_ny_time() =>
     timestamp("GMT" + str.tostring(gmt_offset), year, month, dayofmonth, hour, minute, second)
@@ -101,11 +128,24 @@ var float ny_pm_low = na
 var float opening_range_high = na
 var float opening_range_low = na
 
+// Silver Bullets variables
+var float london_sb_high = na
+var float london_sb_low = na
+var float ny_am_sb_high = na
+var float ny_am_sb_low = na
+var float ny_pm_sb_high = na
+var float ny_pm_sb_low = na
+
 // Session tracking
 var bool london_session_active = false
 var bool asia_session_active = false
 var bool ny_pm_session_active = false
 var bool opening_range_active = false
+
+// Silver Bullets session tracking
+var bool london_sb_active = false
+var bool ny_am_sb_active = false
+var bool ny_pm_sb_active = false
 
 // ===================== CALCULATIONS =====================
 // Previous Week High/Low
@@ -182,6 +222,46 @@ if is_opening_range()
 else
     if opening_range_active
         opening_range_active := false
+
+// Silver Bullets High/Low tracking
+// London Silver Bullet
+if is_london_silver_bullet()
+    if not london_sb_active
+        london_sb_active := true
+        london_sb_high := high
+        london_sb_low := low
+    else
+        london_sb_high := math.max(london_sb_high, high)
+        london_sb_low := math.min(london_sb_low, low)
+else
+    if london_sb_active
+        london_sb_active := false
+
+// NY AM Silver Bullet
+if is_ny_am_silver_bullet()
+    if not ny_am_sb_active
+        ny_am_sb_active := true
+        ny_am_sb_high := high
+        ny_am_sb_low := low
+    else
+        ny_am_sb_high := math.max(ny_am_sb_high, high)
+        ny_am_sb_low := math.min(ny_am_sb_low, low)
+else
+    if ny_am_sb_active
+        ny_am_sb_active := false
+
+// NY PM Silver Bullet
+if is_ny_pm_silver_bullet()
+    if not ny_pm_sb_active
+        ny_pm_sb_active := true
+        ny_pm_sb_high := high
+        ny_pm_sb_low := low
+    else
+        ny_pm_sb_high := math.max(ny_pm_sb_high, high)
+        ny_pm_sb_low := math.min(ny_pm_sb_low, low)
+else
+    if ny_pm_sb_active
+        ny_pm_sb_active := false
 
 // ===================== VWAP =====================
 vwap_value = show_vwap ? ta.vwap(hlc3) : na
@@ -282,6 +362,34 @@ if show_opening_range and not na(opening_range_low)
     line.new(bar_index[100], opening_range_low, bar_index, opening_range_low, 
              color=opening_range_color, width=line_width, style=get_line_style(), extend=extend.right)
 
+// Silver Bullets Levels
+// London Silver Bullet Levels
+if show_silver_bullets and not na(london_sb_high)
+    line.new(bar_index[100], london_sb_high, bar_index, london_sb_high, 
+             color=color.new(color.purple, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+    
+if show_silver_bullets and not na(london_sb_low)
+    line.new(bar_index[100], london_sb_low, bar_index, london_sb_low, 
+             color=color.new(color.purple, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+
+// NY AM Silver Bullet Levels
+if show_silver_bullets and not na(ny_am_sb_high)
+    line.new(bar_index[100], ny_am_sb_high, bar_index, ny_am_sb_high, 
+             color=color.new(color.orange, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+    
+if show_silver_bullets and not na(ny_am_sb_low)
+    line.new(bar_index[100], ny_am_sb_low, bar_index, ny_am_sb_low, 
+             color=color.new(color.orange, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+
+// NY PM Silver Bullet Levels
+if show_silver_bullets and not na(ny_pm_sb_high)
+    line.new(bar_index[100], ny_pm_sb_high, bar_index, ny_pm_sb_high, 
+             color=color.new(color.maroon, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+    
+if show_silver_bullets and not na(ny_pm_sb_low)
+    line.new(bar_index[100], ny_pm_sb_low, bar_index, ny_pm_sb_low, 
+             color=color.new(color.maroon, 20), width=line_width + 1, style=get_line_style(), extend=extend.right)
+
 // ===================== SESSION BACKGROUNDS =====================
 // London Session Background
 bgcolor(show_london and is_london_session() ? london_bg_color : na, title="London Session Background")
@@ -291,6 +399,16 @@ bgcolor(show_asia and is_asia_session() ? asia_bg_color : na, title="Asia Sessio
 
 // NY PM Session Background
 bgcolor(show_ny_pm and is_ny_pm_session() ? ny_pm_bg_color : na, title="NY PM Session Background")
+
+// ===================== SILVER BULLETS BACKGROUNDS =====================
+// London Silver Bullet Background
+bgcolor(show_silver_bullets and is_london_silver_bullet() ? london_sb_bg_color : na, title="London Silver Bullet Background")
+
+// NY AM Silver Bullet Background
+bgcolor(show_silver_bullets and is_ny_am_silver_bullet() ? ny_am_sb_bg_color : na, title="NY AM Silver Bullet Background")
+
+// NY PM Silver Bullet Background
+bgcolor(show_silver_bullets and is_ny_pm_silver_bullet() ? ny_pm_sb_bg_color : na, title="NY PM Silver Bullet Background")
 
 // ===================== LABELS =====================
 // Add labels for better identification
@@ -337,6 +455,25 @@ if show_opening_range and not na(opening_range_high) and barstate.islast
 if show_opening_range and not na(opening_range_low) and barstate.islast
     label.new(bar_index, opening_range_low, text="ORL", style=label.style_label_up, color=opening_range_color, textcolor=color.black, size=size.small)
 
+// Silver Bullets labels
+if show_silver_bullets and not na(london_sb_high) and barstate.islast
+    label.new(bar_index, london_sb_high, text="LSB-H", style=label.style_label_down, color=color.new(color.purple, 20), textcolor=color.white, size=size.small)
+    
+if show_silver_bullets and not na(london_sb_low) and barstate.islast
+    label.new(bar_index, london_sb_low, text="LSB-L", style=label.style_label_up, color=color.new(color.purple, 20), textcolor=color.white, size=size.small)
+
+if show_silver_bullets and not na(ny_am_sb_high) and barstate.islast
+    label.new(bar_index, ny_am_sb_high, text="AM-SB-H", style=label.style_label_down, color=color.new(color.orange, 20), textcolor=color.black, size=size.small)
+    
+if show_silver_bullets and not na(ny_am_sb_low) and barstate.islast
+    label.new(bar_index, ny_am_sb_low, text="AM-SB-L", style=label.style_label_up, color=color.new(color.orange, 20), textcolor=color.black, size=size.small)
+
+if show_silver_bullets and not na(ny_pm_sb_high) and barstate.islast
+    label.new(bar_index, ny_pm_sb_high, text="PM-SB-H", style=label.style_label_down, color=color.new(color.maroon, 20), textcolor=color.white, size=size.small)
+    
+if show_silver_bullets and not na(ny_pm_sb_low) and barstate.islast
+    label.new(bar_index, ny_pm_sb_low, text="PM-SB-L", style=label.style_label_up, color=color.new(color.maroon, 20), textcolor=color.white, size=size.small)
+
 // ===================== ALERTS =====================
 // EMA Cross Alerts
 alertcondition(ema_cross_up, title="EMA Cross Up", message="9 EMA crossed above 21 EMA")
@@ -347,3 +484,8 @@ alertcondition(is_london_session() and not is_london_session()[1], title="London
 alertcondition(is_asia_session() and not is_asia_session()[1], title="Asia Session Start", message="Asia Session has started")
 alertcondition(is_ny_pm_session() and not is_ny_pm_session()[1], title="NY PM Session Start", message="NY PM Session has started")
 alertcondition(is_opening_range() and not is_opening_range()[1], title="Opening Range Start", message="Opening Range (9:30-9:45 NY) has started")
+
+// Silver Bullets Start Alerts
+alertcondition(is_london_silver_bullet() and not is_london_silver_bullet()[1], title="London Silver Bullet Start", message="London Silver Bullet period has started")
+alertcondition(is_ny_am_silver_bullet() and not is_ny_am_silver_bullet()[1], title="NY AM Silver Bullet Start", message="NY AM Silver Bullet period has started")
+alertcondition(is_ny_pm_silver_bullet() and not is_ny_pm_silver_bullet()[1], title="NY PM Silver Bullet Start", message="NY PM Silver Bullet period has started")
