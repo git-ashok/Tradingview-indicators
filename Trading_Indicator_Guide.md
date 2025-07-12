@@ -36,7 +36,16 @@ This comprehensive Pine Script indicator combines multiple trading tools into on
 - **Features**: Enhanced line thickness, distinct colors, and background highlighting
 - **Labels**: LSB-H/L (London), AM-SB-H/L (NY AM), PM-SB-H/L (NY PM)
 
-### 6. Technical Indicators
+### 6. ICT Fair Value Gaps (FVG) & Inverse Fair Value Gaps (IFVG)
+- **Bullish FVG**: Gap up where low[0] > high[2] (green boxes)
+- **Bearish FVG**: Gap down where high[0] < low[2] (red boxes)
+- **Bullish IFVG**: Rejection from bearish gap area (lime boxes)
+- **Bearish IFVG**: Rejection from bullish gap area (orange boxes)
+- **Timeframe Specific**: Only shows on selected timeframes (1m, 5m, 15m, 1h, 4h, 1D)
+- **Limit Control**: Shows last 5 FVGs by default (customizable 1-10)
+- **Features**: Extend to right, labels, custom colors
+
+### 7. Technical Indicators
 - **VWAP**: Volume Weighted Average Price
 - **9 EMA & 21 EMA**: Exponential Moving Averages with cross signals
 - **Standard Pivot Points**: PP, R1-R3, S1-S3 levels
@@ -51,6 +60,8 @@ Turn any feature on/off independently:
 - Asia Session
 - New York PM Session
 - ICT Silver Bullets
+- ICT Fair Value Gaps (FVG)
+- ICT Inverse Fair Value Gaps (IFVG)
 - VWAP
 - EMAs
 - Pivot Points
@@ -79,6 +90,11 @@ Turn any feature on/off independently:
 - 21 EMA: Fuchsia (default)
 - Pivots: Gray (default)
 - Opening Range: Aqua (default)
+- **FVG Colors**:
+  - Bullish FVG: Green (80% transparency)
+  - Bearish FVG: Red (80% transparency)  
+  - Bullish IFVG: Lime (80% transparency)
+  - Bearish IFVG: Orange (80% transparency)
 
 **Background Colors**: Customize session background highlights
 - London: Light Blue (95% transparency)
@@ -97,6 +113,13 @@ Turn any feature on/off independently:
 - **9 EMA Length**: Default 9 (customizable)
 - **21 EMA Length**: Default 21 (customizable)
 - **Cross Signals**: Toggle EMA cross alerts on/off
+
+### Fair Value Gaps Settings
+- **Detection Timeframe**: Current, 1m, 5m, 15m, 1h, 4h, 1D
+- **Number to Show**: 1-10 FVGs/IFVGs (default 5)
+- **Extend Right**: Extend boxes to the right edge
+- **Show Labels**: Display FVG/IFVG labels on boxes
+- **Timeframe Filtering**: Only shows FVGs on selected timeframes
 
 ## How to Use
 
@@ -139,6 +162,14 @@ Turn any feature on/off independently:
 - **Breakout Strategy**: Trade breaks of Silver Bullet high/low levels
 - **Reversal Strategy**: Look for rejections at Silver Bullet extremes
 
+#### Fair Value Gaps Trading
+- **FVG Strategy**: Trade fills of fair value gaps as magnets
+- **IFVG Strategy**: Look for reversals at inverse fair value gaps
+- **Timeframe Selection**: Use higher timeframes for stronger FVGs
+- **Entry Timing**: Enter on retests of FVG levels
+- **Target Setting**: Use FVGs as support/resistance levels
+- **Confluence**: Combine FVGs with session levels for high-probability setups
+
 ## Label Reference
 - **PWH/PWL**: Previous Week High/Low
 - **YH/YL/YC/YM**: Yesterday High/Low/Close/Midpoint  
@@ -149,6 +180,8 @@ Turn any feature on/off independently:
 - **LSB-H/LSB-L**: London Silver Bullet High/Low
 - **AM-SB-H/AM-SB-L**: NY AM Silver Bullet High/Low
 - **PM-SB-H/PM-SB-L**: NY PM Silver Bullet High/Low
+- **FVG↑/FVG↓**: Bullish/Bearish Fair Value Gap
+- **IFVG↑/IFVG↓**: Bullish/Bearish Inverse Fair Value Gap
 
 ## Alert Options
 The indicator includes alerts for:
@@ -156,6 +189,7 @@ The indicator includes alerts for:
 - Session start notifications (London, Asia, NY PM)
 - Opening Range start notification
 - Silver Bullets start notifications (London SB, NY AM SB, NY PM SB)
+- Fair Value Gap detection (Bullish/Bearish FVG, Bullish/Bearish IFVG)
 
 ## Tips for Best Results
 
@@ -164,6 +198,9 @@ The indicator includes alerts for:
 3. **Timeframe Selection**: Use 5-15 minute charts for intraday analysis
 4. **Session Awareness**: Trade during active sessions for better volume
 5. **Level Confluence**: Look for multiple levels converging for stronger signals
+6. **FVG Timeframes**: Use higher timeframes (1h, 4h, 1D) for stronger FVG signals
+7. **FVG Validation**: Wait for price to show respect at FVG levels before entering
+8. **Limit FVGs**: Keep FVG count low (3-5) to avoid chart clutter
 
 ## Troubleshooting
 
@@ -172,10 +209,16 @@ The indicator includes alerts for:
 - **Wrong session times**: Verify GMT offset setting
 - **Too many lines**: Disable unused features to reduce clutter
 - **Performance**: Reduce line count on lower timeframes if needed
+- **FVGs not showing**: Verify timeframe selection matches chart timeframe
+- **Too many FVGs**: Reduce the number limit in settings
+- **FVG quality**: Use higher timeframes for more reliable FVG signals
 
 ### Performance Optimization
 - Turn off unused features
 - Use higher timeframes for cleaner display
 - Limit to essential levels for active trading
+- Reduce FVG count to 3-5 for better performance
+- Use FVG timeframe filtering to reduce noise
+- Disable FVG labels on lower timeframes to reduce visual clutter
 
 This indicator provides institutional-grade level analysis with full customization control, making it suitable for any trading style or market condition.

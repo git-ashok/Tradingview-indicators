@@ -14,6 +14,8 @@ show_ema = input.bool(true, "Show EMAs", group=group_toggles)
 show_pivots = input.bool(true, "Show Pivot Points", group=group_toggles)
 show_opening_range = input.bool(true, "Show Opening Range (9:30-9:45)", group=group_toggles)
 show_silver_bullets = input.bool(true, "Show ICT Silver Bullets", group=group_toggles)
+show_fvg = input.bool(true, "Show ICT Fair Value Gaps", group=group_toggles)
+show_ifvg = input.bool(true, "Show ICT Inverse Fair Value Gaps", group=group_toggles)
 
 // Session Times
 group_sessions = "═══ SESSION TIMES ═══"
@@ -33,6 +35,13 @@ ny_am_sb_end = input.string("14:30", "NY AM Silver Bullet End (GMT)", options=["
 ny_pm_sb_start = input.string("18:30", "NY PM Silver Bullet Start (GMT)", options=["17:30", "18:00", "18:30", "19:00", "19:30"], group=group_sessions)
 ny_pm_sb_end = input.string("19:30", "NY PM Silver Bullet End (GMT)", options=["18:30", "19:00", "19:30", "20:00", "20:30"], group=group_sessions)
 
+// FVG Settings
+group_fvg = "═══ FAIR VALUE GAPS SETTINGS ═══"
+fvg_timeframe = input.string("Current", "FVG Detection Timeframe", options=["Current", "1m", "5m", "15m", "1h", "4h", "1D"], group=group_fvg)
+fvg_limit = input.int(5, "Number of FVGs to Show", minval=1, maxval=10, group=group_fvg)
+fvg_extend_right = input.bool(true, "Extend FVGs to Right", group=group_fvg)
+fvg_show_labels = input.bool(true, "Show FVG Labels", group=group_fvg)
+
 // Colors - Levels
 group_colors = "═══ LEVEL COLORS ═══"
 prev_week_color = input.color(color.purple, "Previous Week High/Low Color", group=group_colors)
@@ -45,6 +54,10 @@ ema9_color = input.color(color.lime, "9 EMA Color", group=group_colors)
 ema21_color = input.color(color.fuchsia, "21 EMA Color", group=group_colors)
 pivot_color = input.color(color.gray, "Pivot Points Color", group=group_colors)
 opening_range_color = input.color(color.aqua, "Opening Range Color", group=group_colors)
+fvg_bullish_color = input.color(color.new(color.green, 80), "Bullish FVG Color", group=group_colors)
+fvg_bearish_color = input.color(color.new(color.red, 80), "Bearish FVG Color", group=group_colors)
+ifvg_bullish_color = input.color(color.new(color.lime, 80), "Bullish IFVG Color", group=group_colors)
+ifvg_bearish_color = input.color(color.new(color.orange, 80), "Bearish IFVG Color", group=group_colors)
 
 // Background Colors
 group_bg_colors = "═══ BACKGROUND COLORS ═══"
@@ -112,6 +125,35 @@ is_opening_range() =>
     ny_minute = minute(ny_time)
     (ny_hour == 9 and ny_minute >= 30) or (ny_hour == 9 and ny_minute <= 45)
 
+// FVG Helper Functions
+get_fvg_timeframe() =>
+    switch fvg_timeframe
+        "Current" => timeframe.period
+        "1m" => "1"
+        "5m" => "5"
+        "15m" => "15"
+        "1h" => "60"
+        "4h" => "240"
+        "1D" => "1D"
+        => timeframe.period
+
+// Check if current timeframe matches selected FVG timeframe
+is_valid_fvg_timeframe() =>
+    selected_tf = get_fvg_timeframe()
+    if fvg_timeframe == "Current"
+        true
+    else
+        current_tf_minutes = timeframe.in_seconds() / 60
+        selected_tf_minutes = switch selected_tf
+            "1" => 1
+            "5" => 5
+            "15" => 15
+            "60" => 60
+            "240" => 240
+            "1D" => 1440
+            => 0
+        current_tf_minutes == selected_tf_minutes
+
 // ===================== VARIABLES =====================
 var float prev_week_high = na
 var float prev_week_low = na
@@ -146,6 +188,12 @@ var bool opening_range_active = false
 var bool london_sb_active = false
 var bool ny_am_sb_active = false
 var bool ny_pm_sb_active = false
+
+// FVG Arrays to store last 5 of each type
+var fvg_bull_boxes = array.new<box>()
+var fvg_bear_boxes = array.new<box>()
+var ifvg_bull_boxes = array.new<box>()
+var ifvg_bear_boxes = array.new<box>()
 
 // ===================== CALCULATIONS =====================
 // Previous Week High/Low
@@ -262,6 +310,90 @@ if is_ny_pm_silver_bullet()
 else
     if ny_pm_sb_active
         ny_pm_sb_active := false
+
+// ===================== FAIR VALUE GAPS =====================
+// FVG Detection and Management
+manage_fvg_array(fvg_array) =>
+    if array.size(fvg_array) > fvg_limit
+        old_box = array.shift(fvg_array)
+        box.delete(old_box)
+
+// Detect Bullish FVG (gap up)
+detect_bullish_fvg() =>
+    if is_valid_fvg_timeframe() and show_fvg
+        // Bullish FVG: low[0] > high[2] with gap in candle[1]
+        gap_exists = low[0] > high[2]
+        gap_not_filled = low[1] > high[2] or high[1] < low[0]
+        gap_exists and gap_not_filled
+
+// Detect Bearish FVG (gap down)  
+detect_bearish_fvg() =>
+    if is_valid_fvg_timeframe() and show_fvg
+        // Bearish FVG: high[0] < low[2] with gap in candle[1]
+        gap_exists = high[0] < low[2]
+        gap_not_filled = high[1] < low[2] or low[1] > high[0]
+        gap_exists and gap_not_filled
+
+// Detect Bullish IFVG (inverse fair value gap)
+detect_bullish_ifvg() =>
+    if is_valid_fvg_timeframe() and show_ifvg
+        // Bullish IFVG: Price rejection from a bearish gap area
+        gap_exists = high[0] < low[2]
+        rejection_candle = close[0] > open[0] and low[0] <= high[2] and high[0] >= low[2]
+        gap_exists and rejection_candle
+
+// Detect Bearish IFVG (inverse fair value gap)
+detect_bearish_ifvg() =>
+    if is_valid_fvg_timeframe() and show_ifvg
+        // Bearish IFVG: Price rejection from a bullish gap area  
+        gap_exists = low[0] > high[2]
+        rejection_candle = close[0] < open[0] and high[0] >= low[2] and low[0] <= high[2]
+        gap_exists and rejection_candle
+
+// Create FVG boxes
+if detect_bullish_fvg()
+    fvg_box = box.new(bar_index[2], high[2], bar_index + (fvg_extend_right ? 20 : 0), low[0], 
+                      bgcolor=fvg_bullish_color, border_color=color.new(color.green, 50), border_width=1,
+                      extend=fvg_extend_right ? extend.right : extend.none)
+    array.push(fvg_bull_boxes, fvg_box)
+    manage_fvg_array(fvg_bull_boxes)
+    
+    if fvg_show_labels
+        label.new(bar_index, low[0], text="FVG↑", style=label.style_label_up, 
+                  color=color.new(color.green, 30), textcolor=color.white, size=size.small)
+
+if detect_bearish_fvg()
+    fvg_box = box.new(bar_index[2], low[2], bar_index + (fvg_extend_right ? 20 : 0), high[0], 
+                      bgcolor=fvg_bearish_color, border_color=color.new(color.red, 50), border_width=1,
+                      extend=fvg_extend_right ? extend.right : extend.none)
+    array.push(fvg_bear_boxes, fvg_box)
+    manage_fvg_array(fvg_bear_boxes)
+    
+    if fvg_show_labels
+        label.new(bar_index, high[0], text="FVG↓", style=label.style_label_down, 
+                  color=color.new(color.red, 30), textcolor=color.white, size=size.small)
+
+if detect_bullish_ifvg()
+    ifvg_box = box.new(bar_index[2], low[2], bar_index + (fvg_extend_right ? 20 : 0), high[0], 
+                       bgcolor=ifvg_bullish_color, border_color=color.new(color.lime, 50), border_width=1,
+                       extend=fvg_extend_right ? extend.right : extend.none)
+    array.push(ifvg_bull_boxes, ifvg_box)
+    manage_fvg_array(ifvg_bull_boxes)
+    
+    if fvg_show_labels
+        label.new(bar_index, high[0], text="IFVG↑", style=label.style_label_up, 
+                  color=color.new(color.lime, 30), textcolor=color.black, size=size.small)
+
+if detect_bearish_ifvg()
+    ifvg_box = box.new(bar_index[2], high[2], bar_index + (fvg_extend_right ? 20 : 0), low[0], 
+                       bgcolor=ifvg_bearish_color, border_color=color.new(color.orange, 50), border_width=1,
+                       extend=fvg_extend_right ? extend.right : extend.none)
+    array.push(ifvg_bear_boxes, ifvg_box)
+    manage_fvg_array(ifvg_bear_boxes)
+    
+    if fvg_show_labels
+        label.new(bar_index, low[0], text="IFVG↓", style=label.style_label_down, 
+                  color=color.new(color.orange, 30), textcolor=color.black, size=size.small)
 
 // ===================== VWAP =====================
 vwap_value = show_vwap ? ta.vwap(hlc3) : na
@@ -489,3 +621,9 @@ alertcondition(is_opening_range() and not is_opening_range()[1], title="Opening 
 alertcondition(is_london_silver_bullet() and not is_london_silver_bullet()[1], title="London Silver Bullet Start", message="London Silver Bullet period has started")
 alertcondition(is_ny_am_silver_bullet() and not is_ny_am_silver_bullet()[1], title="NY AM Silver Bullet Start", message="NY AM Silver Bullet period has started")
 alertcondition(is_ny_pm_silver_bullet() and not is_ny_pm_silver_bullet()[1], title="NY PM Silver Bullet Start", message="NY PM Silver Bullet period has started")
+
+// FVG Detection Alerts
+alertcondition(detect_bullish_fvg(), title="Bullish FVG Detected", message="Bullish Fair Value Gap detected")
+alertcondition(detect_bearish_fvg(), title="Bearish FVG Detected", message="Bearish Fair Value Gap detected")
+alertcondition(detect_bullish_ifvg(), title="Bullish IFVG Detected", message="Bullish Inverse Fair Value Gap detected")
+alertcondition(detect_bearish_ifvg(), title="Bearish IFVG Detected", message="Bearish Inverse Fair Value Gap detected")
